@@ -1,2 +1,0 @@
-2025-08-24 19:34:52.464 | INFO     | app.back.data.BaseSheetController:init:54 - [SheetConfig] Excel-файл загружен: E:\notes\library\files\SheetFiles\library.xlsx
-2025-08-24 19:34:52.487 | INFO     | app.back.data.SqlData.BaseCrud:initdb:40 - Попытка инициализировать базу данных
