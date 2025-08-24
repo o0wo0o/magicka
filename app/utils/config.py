@@ -73,12 +73,6 @@ class BetterConfigParser(ConfigParser, Counters):
         return Path(self[section][option])
 
     def increment_counter(self, counter: str):
-        if not self._initialized:
-            raise RuntimeError("CONFIG not initialized. Call 'await init_config()' first.")
-
-        if counter not in {"dbbackupscounter", "xlsxbackupscounter", "csvbackupscounter"}:
-            raise TypeError("Only valid COUNTERS allowed")
-
         a = int(self["Counters"][counter])
         self["Counters"][counter] = str(a + 1)
         self._write()
