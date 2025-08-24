@@ -51,8 +51,11 @@ async def compress_all(directory: Path, bfile):
 
 
 def get_project_root() -> Path:
-    return Path(__file__).parent.parent.parent
-
+    # если запущено в Docker — бери переменную окружения
+    if "PROJECT_ROOT" in os.environ:
+        return SyncPath(os.environ["PROJECT_ROOT"])
+    # fallback для локального запуска
+    return SyncPath(__file__).resolve().parents[2]
 
 async def open_file_explorer(path="."):
     def _open():

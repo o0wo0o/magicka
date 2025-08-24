@@ -101,7 +101,6 @@ app = rx.App(lifespan_tasks={init_app},
              backend_exception_handler=custom_backend_handler
              )
 
-
 app.add_page(index.page, route="/")
 app.add_page(backups.page, route="/backups")
 app.add_page(users.page, route="/users")
@@ -111,4 +110,3 @@ app.add_page(logs.page, route="/log")
 app.add_page(sync.page, route="sync")
 app.add_page(sync_backups.page, route="sync_backups")
 app.add_page(settings.page, route="settings")
-

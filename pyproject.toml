@@ -88,6 +88,7 @@ selenium = "^4.28.1"
 sqlalchemy-utils = "^0.41.2"
 loguru = "^0.7.3"
 ruff = "^0.11.11"
+reflex = "0.7.7"
 
 
 [build-system]
