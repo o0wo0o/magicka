@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "l1br@ry"
 authors = ["0wo0w <you@example.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.ruff]
 line-length = 100               # Максимальная длина строки
