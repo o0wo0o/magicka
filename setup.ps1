@@ -1,82 +1,161 @@
 <#
 Installer for Reflex project (Windows)
-- Assumes Python 3.12+ is installed globally
-- Creates venv in project root
-- Installs poetry and dependencies via poetry install
-- Installs bun via official installer
-- Creates run.bat to launch Reflex
+- Assumes Python 3.12+ is installed and available in PATH
+- Creates a venv folder in the project root (.\venv)
+- Installs poetry inside the venv and runs `poetry install`
+- Attempts to install bun using the official installer script
+- Creates run.bat in project root
+Notes:
+- pip installs use --proxy "" (empty proxy) as requested
 #>
 
-set -e
+# stop on errors
+$ErrorActionPreference = 'Stop'
 
+# paths
 $ProjectDir = (Get-Location).ProviderPath
-$VenvDir = Join-Path $ProjectDir "venv"
-$ScriptsDir = Join-Path $VenvDir "Scripts"
+$VenvDir    = Join-Path $ProjectDir "venv"
+$ScriptsDir  = Join-Path $VenvDir "Scripts"
 
-function Write-Ok { param($m) Write-Host $m -ForegroundColor Green }
+# output helpers
+function Write-Ok   { param($m) Write-Host $m -ForegroundColor Green }
 function Write-Warn { param($m) Write-Host $m -ForegroundColor Yellow }
-function Write-Err { param($m) Write-Host $m -ForegroundColor Red }
+function Write-Err  { param($m) Write-Host $m -ForegroundColor Red }
 
 Write-Host "Project directory: $ProjectDir"
 
 # --- 1) Check python ---
-$pythonCmd = (Get-Command python -ErrorAction SilentlyContinue).Source
-if (-not $pythonCmd) { throw "Python 3.12+ не найден в PATH. Установи Python." }
+$pythonCmdInfo = Get-Command python -ErrorAction SilentlyContinue
+$pythonCmd = if ($pythonCmdInfo) { $pythonCmdInfo.Source } else { $null }
 
-$ver = & $pythonCmd -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
+if (-not $pythonCmd) {
+    Write-Err "Python 3.12+ not found in PATH. Please install Python and try again."
+    exit 1
+}
+
+try {
+    $ver = & $pythonCmd -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
+} catch {
+    Write-Err "Failed to determine Python version: $($_.Exception.Message)"
+    exit 2
+}
+
 $vParts = $ver -split '\.'
 if ([int]$vParts[0] -lt 3 -or ([int]$vParts[0] -eq 3 -and [int]$vParts[1] -lt 12)) {
-    throw "Нужен Python 3.12+, текущий: $ver"
+    Write-Err "Python 3.12 or newer is required. Current version: $ver"
+    exit 3
 }
-Write-Ok "Python $ver найден"
+
+Write-Ok "Found Python $ver"
 
 # --- 2) Create venv ---
 if (-not (Test-Path $VenvDir)) {
-    Write-Host "Создаём venv в $VenvDir ..."
-    & $pythonCmd -m venv $VenvDir
-    Write-Ok "venv создан"
-} else { Write-Ok "venv уже существует" }
+    Write-Host "Creating virtual environment at $VenvDir ..."
+    try {
+        & $pythonCmd -m venv $VenvDir
+        Write-Ok "Virtual environment created."
+    } catch {
+        Write-Err "Failed to create virtual environment: $($_.Exception.Message)"
+        exit 4
+    }
+} else {
+    Write-Ok "Virtual environment already exists at $VenvDir"
+}
 
 $VenvPython = Join-Path $ScriptsDir "python.exe"
-
-# --- 3) Upgrade pip and install poetry ---
-Write-Host "Обновляем pip и устанавливаем poetry..."
-& $VenvPython -m pip install --upgrade pip setuptools wheel | Out-Null
-& $VenvPython -m pip install poetry | Out-Null
-Write-Ok "poetry установлен в venv"
-
-# --- 4) Install dependencies ---
-Write-Host "Устанавливаем зависимости (poetry install)..."
-$poetryExe = Join-Path $ScriptsDir "poetry.exe"
-if (Test-Path $poetryExe) {
-    & $poetryExe install --no-interaction
-} else {
-    & $VenvPython -m poetry install --no-interaction
+if (-not (Test-Path $VenvPython)) {
+    Write-Warn "python.exe not found in venv scripts folder ($VenvPython). Attempting to recreate venv."
+    try {
+        & $pythonCmd -m venv $VenvDir
+    } catch {
+        Write-Err "Failed to recreate venv: $($_.Exception.Message)"
+        exit 5
+    }
 }
-Write-Ok "Зависимости установлены"
 
-# --- 5) Install bun via official installer ---
-Write-Host "Устанавливаем bun через официальный скрипт..."
+# --- 3) Upgrade pip and install poetry inside venv ---
+Write-Host "Upgrading pip and installing poetry in venv"
 try {
-    iex "& { $(irm https://bun.sh/install.ps1) }"
-    Write-Ok "bun установлен"
+    & $VenvPython -m pip install --proxy="" --upgrade pip setuptools wheel | Out-Null
+    & $VenvPython -m pip install --proxy="" poetry | Out-Null
+    Write-Ok "Poetry installed inside venv."
 } catch {
-    Write-Warn "Не удалось автоматически установить bun: $_"
-    Write-Host "Скачай вручную с https://bun.sh и добавь bun.exe в PATH"
+    Write-Err "Failed to install poetry in venv: $($_.Exception.Message)"
+    exit 6
 }
 
-# --- 6) Create run.bat ---
+# --- 4) Install dependencies with poetry ---
+Write-Host "Installing dependencies (poetry install) ..."
+$poetryExe = Join-Path $ScriptsDir "poetry.exe"
+# tell poetry to NOT create its own virtualenv, use current interpreter instead
+$env:POETRY_VIRTUALENVS_CREATE = "false"
+try {
+    if (Test-Path $poetryExe) {
+        & $poetryExe install --no-interaction
+    } else {
+        & $VenvPython -m poetry install --no-interaction
+    }
+    Write-Ok "Dependencies installed."
+} catch {
+    Write-Err "poetry install failed: $($_.Exception.Message)"
+    exit 7
+}
+
+# --- 5) Install bun via official installer script ---
+Write-Host "Attempting to install bun via official installer..."
+$bunInstalled = $false
+try {
+    $installer = Invoke-RestMethod -Uri 'https://bun.sh/install.ps1' -UseBasicParsing
+    if (-not $installer) { throw "Could not download bun installer" }
+    Invoke-Expression $installer
+    Write-Ok "bun installer executed. bun should be installed."
+    $bunInstalled = $true
+} catch {
+    Write-Warn "Automatic bun installation failed: $($_.Exception.Message)"
+    Write-Host "Please download bun from https://bun.sh and add bun.exe to PATH or copy it into $ScriptsDir"
+}
+
+# Try to copy bun.exe into venv\Scripts if bun was installed into known default location
+if ($bunInstalled) {
+    $possiblePaths = @(
+        (Join-Path $env:LOCALAPPDATA "bun\bun.exe"),
+        (Join-Path $env:USERPROFILE ".bun\bin\bun.exe"),
+        (Join-Path $env:LOCALAPPDATA "Programs\bun\bun.exe")
+    )
+    foreach ($p in $possiblePaths) {
+        if (Test-Path $p) {
+            try {
+                if (-not (Test-Path $ScriptsDir)) { New-Item -ItemType Directory -Path $ScriptsDir | Out-Null }
+                Copy-Item -Path $p -Destination (Join-Path $ScriptsDir "bun.exe") -Force
+                Write-Ok "Copied bun.exe from $p to $ScriptsDir"
+                break
+            } catch {
+                Write-Warn "Failed to copy bun.exe from $p : $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
+# --- 6) Create run.bat in project root ---
 $runBat = Join-Path $ProjectDir "run.bat"
-$runContent = @"
+$runContent = @'
 @echo off
 chcp 65001 >nul
 title Reflex App
-call `"%~dp0venv\Scripts\activate`"
+call "%~dp0venv\Scripts\activate"
 poetry run reflex run --env prod
 pause
-"@
+'@
 
-Set-Content -Path $runBat -Value $runContent -Encoding UTF8
-Write-Ok "run.bat создан в $runBat"
+try {
+    Set-Content -Path $runBat -Value $runContent -Encoding UTF8
+    Write-Ok "run.bat created at $runBat"
+} catch {
+    Write-Warn "Failed to create run.bat: $($_.Exception.Message)"
+}
 
-Write-Ok "Установка завершена! Запускай run.bat для старта приложения."
+# --- Done ---
+Write-Ok "Setup completed."
+Write-Host "To run the app:"
+Write-Host '  .\venv\Scripts\activate'
+Write-Host '  poetry run reflex run --env prod'
