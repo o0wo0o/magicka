@@ -89,7 +89,7 @@ $runBat = Join-Path $ProjectDir "run.bat"
 $runContent = @'
 @echo off
 chcp 65001 >nul
-title Reflex App
+title Magicka
 call "%~dp0.venv\Scripts\activate"
 poetry run reflex run --env prod
 pause

@@ -22,10 +22,10 @@ class ParserConfig:
 
     @classmethod
     def init_parser_config(cls):
-        cls.driver_path: str = f"{CONFIG.get_path('ProjectRoot', 'projectroot')}/app/utils/geckodriver.exe"
+        cls.driver_path: str = f"{CONFIG.get_path("Files", "seleniumdriver")}"
         cls.service = Service(cls.driver_path)
         cls.options = Options()
-        cls.options.binary_location = r"E:\sosoft\firefox.exe"
+        cls.options.binary_location = f"{CONFIG.get_path("Files", "browserpath")}"
         cls.selenium_driver = webdriver.Firefox(service=cls.service, options=cls.options)
 
 
