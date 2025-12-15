@@ -15,9 +15,15 @@ With some modifications this can be run on Linux
 
 clone repo `git clone https://github.com/o0wo0o/magicka`
 <p>run setuo.ps1 in consoe</p>
+<p>check /app/utils/config/config.ini and put correct values in browserpath and maybe projectroot</p>
 <p>then run run.bat</p> 
-
 wait for setup and follow link (localhost:3000). 
 
 ### for linux:
+clone repo `git clone https://github.com/o0wo0o/magicka`
+<p>manually insall poetry and requirements</p>
+<p>check /app/utils/config/config.ini and put correct values in browserpath and maybe projectroot. And change seleniumdriver to correct file</p>
+<p>use poetry run reflex run --env prod</p>
+<p>wait for setup and follow link (localhost:3000).</p>
+
 
