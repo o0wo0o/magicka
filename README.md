@@ -7,14 +7,14 @@ This app can do a lot (crud users, books, borrow books, integrations with exel a
 
 <img width="2463" height="932" alt="pic" src="https://github.com/user-attachments/assets/3048642e-1387-40ce-adfc-6366ed113638" />
 
-With some modifications this can be run on Linux
+With some modifications it can be run on Linux
 
 
 # install & run
 ### for windows:
 
 clone repo `git clone https://github.com/o0wo0o/magicka`
-<p>run setuo.ps1 in consoe</p>
+<p>run setup.ps1 in consoe</p>
 <p>check /app/utils/config/config.ini and put correct values in browserpath and maybe projectroot</p>
 <p>then run run.bat</p> 
 wait for setup and follow link (localhost:3000). 
